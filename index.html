@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset=utf-8>
+    <title>Basic Render</title>
+    <meta name="viewport" content="width=device-width" />
+</head>
+
+
+<body>
+    <script src="https://imgcache.qq.com/qcloud/tcbjs/1.7.0/tcb.js"></script>
+
+    <script src="js/most.min.js"></script>
+    <script src="js/three.min.js"></script>
+    <script src="js/OrbitControls.js"></script>
+    <script src="js/adapter/three/ThreeAdapter.js"></script>
+    <script src="js/cloud.js"></script>
+
+    <script src="dist/ldr.js"></script>
+
+    <script>
+        let onLogin = (app, tcb) => {
+            cloud.setApp(app);
+            cloud.setTcb(tcb);
+
+            ldr.Adapter.setAdapter(THREEAdapter);
+
+
+            let startTime = new Date();
+
+            // let model = cloud.getStoragePrefix() + "models/box.dat"
+            // let model = cloud.getStoragePrefix() + "models/corvette_full.mpd"
+            let model = cloud.getStoragePrefix() + "models/Apple Tree Final.ldr"
+
+            // Set up camera:
+            let camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000000);
+            camera.position.set(10000, 7000, 10000);
+            camera.lookAt(new THREE.Vector3());
+
+            // Set up scene:
+            let scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xFFFFFF);
+
+            let baseObject = new THREE.Group();
+            let opaqueObject = new THREE.Group();
+            let sixteenObject = new THREE.Group();
+            let transObject = new THREE.Group();
+
+            baseObject.add(opaqueObject); // Draw non-trans before trans.
+            baseObject.add(sixteenObject);
+            baseObject.add(transObject);
+            scene.add(baseObject);
+            let mc = new ldr.LDRMeshCollector(opaqueObject, sixteenObject, transObject);
+
+            // Set up renderer:
+            let renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            function render() {
+                renderer.render(scene, camera);
+            }
+            document.body.appendChild(renderer.domElement);
+
+            function onWindowResize() {
+                camera.left = -window.innerWidth;
+                camera.right = window.innerWidth;
+                camera.top = window.innerHeight;
+                camera.bottom = -window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                render();
+            }
+
+            // React to user input:
+            let controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.addEventListener('change', render);
+            window.addEventListener('resize', onWindowResize, false);
+
+            // Three.js loader for LDraw models:
+            let ldrLoader;
+
+            ldrLoader = new ldr.LDRLoader({
+                buildAllPossibleUrls: (id) => {
+                    let lowerID = id.toLowerCase();
+                    return [
+                        cloud.getStoragePrefix() + "ldraw_parts_total/" + lowerID
+                    ];
+                }
+            });
+
+            ldrLoader.load(model)
+                .subscribe({
+                    next: (data) => {
+                        console.log("next: ", data)
+                    },
+                    error: (e) => {
+                        console.log(e);
+                    },
+                    complete: () => {
+                        console.log("Model loaded in " + (new Date() - startTime) + "ms.");
+
+                        let startTime2 = new Date();
+
+                        console.log(ldrLoader);
+
+                        ldrLoader.generate(4, mc);
+
+                        // Find center of drawn model:
+                        let b = mc.boundingBox;
+                        let elementCenter = new THREE.Vector3();
+                        b.getCenter(elementCenter);
+                        baseObject.position.set(-elementCenter.x, -elementCenter.y, -elementCenter.z);
+                        //baseObject.add(new THREE.Box3Helper(b, 0x0000FF)); // Uncomment if you want to see the bounding box
+
+                        camera.zoom = window.innerWidth / b.min.distanceTo(b.max);
+                        onWindowResize();
+
+
+                        console.log("Model rendered in " + (new Date() - startTime2) + "ms.");
+                    }
+                });
+        };
+
+        const app = tcb.init({
+            appid: 'wx1ed5eb982ad111d4',
+            env: 'testldr1-3t3vf'  // 此处填入你的环境ID
+        });
+
+
+        app.auth().signInAnonymously().then(() => onLogin(app, tcb));
+    </script>
+</body>
+
+</html>
