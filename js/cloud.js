@@ -2,7 +2,7 @@ let cloud = (function () {
     let _app = null;
     let _tcb = null;
 
-    let getStoragePrefix = () => "cloud://testldr1-3t3vf.7465-testldr1-3t3vf-1302357137/";
+    let getStoragePrefix = () => "cloud://modelcloud-8gr5ezr2ec96a9c0.6d6f-modelcloud-8gr5ezr2ec96a9c0-1256942793/";
 
     return {
         getStoragePrefix,
