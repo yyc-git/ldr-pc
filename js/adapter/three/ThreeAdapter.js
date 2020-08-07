@@ -1,5 +1,9 @@
 let Network = (function () {
-    let _handleError = () => {
+    let _handleError = (errObj) => {
+        // console.error(errObj);
+        console.error("error:");
+        expandedLog(errObj);
+
         throw new Error('Network response was not ok.');
     };
 
@@ -10,24 +14,28 @@ let Network = (function () {
             return app.getTempFileURL({
                 fileList: [cloudFileId]
             }).then(res => {
-                let el = res.fileList[0];
+                // console.log("res:");
+                // expandedLog(res);
 
-                if (el.code === 'SUCCESS') {
-                    return fetch(el.tempFileURL);
-                } else {
-                    _handleError();
+                if (res.fileList === undefined) {
+                    _handleError(res)
                 }
+                else {
+                    let el = res.fileList[0];
 
+                    if (el.code === 'SUCCESS') {
+                        return fetch(el.tempFileURL, {});
+                    } else {
+                        _handleError(el);
+                    }
+                }
             }).then((response) => {
                 if (!response.ok) {
-                    _handleError();
+                    _handleError(response);
                 }
 
                 return response;
             }).then(value => value.text());
-            // return new Promise(() => {
-            //     resolve("")
-            // }, () => _handleError);
         }
     }
 }());

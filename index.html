@@ -3,40 +3,185 @@
 
 <head>
     <meta charset=utf-8>
-    <title>Basic Render</title>
+    <title>3LDR Renderer</title>
     <meta name="viewport" content="width=device-width" />
+    <style>
+        #loading-bar {
+            display: none;
+        }
+
+        .loading-bar-item {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin: -25px 0 0 -75px;
+            width: 150px;
+            height: 50px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        #expire-info {
+            width: 100%;
+            height: 300px;
+            text-align: center;
+            display: none;
+        }
+    </style>
 </head>
 
 
 <body>
+    <section id="loading-bar">
+        <section class="loading-bar-item">
+            <!-- icon -->
+            <p></p>
+            <p>
+                <span id="loading-bar-progress"></span>
+                <span>loading...</span>
+            </p>
+        </section>
+    </section>
+
+    <section id="expire-info">
+        <h1>网址已经过期</h1>
+    </section>
+
+
+    <!-- <canvas id="canvas"></canvas> -->
     <script src="https://imgcache.qq.com/qcloud/tcbjs/1.7.0/tcb.js"></script>
 
     <script src="js/most.min.js"></script>
     <script src="js/three.min.js"></script>
+    <!-- <script src="js/three.js"></script> -->
     <script src="js/OrbitControls.js"></script>
     <script src="js/adapter/three/ThreeAdapter.js"></script>
     <script src="js/cloud.js"></script>
 
+    <script src="js/Log.js"></script>
+
+
+
+    <!-- <script src="js/vconsole.min.js"></script> -->
+    <script src="js/vconsole.js"></script>
+
     <script src="dist/ldr.js"></script>
 
     <script>
+        let loadingBar = (function () {
+            let _convertToPercent = (progress) => {
+                return String(Math.floor(progress * 100)) + "%";
+            };
+
+            return {
+                setLoadingProgress: (progress) => {
+                    document.querySelector("#loading-bar-progress").innerHTML = _convertToPercent(progress);
+                },
+                show: () => {
+                    document.querySelector("#loading-bar").style.display = "block";
+                },
+                hide: () => {
+                    document.querySelector("#loading-bar").style.display = "none";
+                }
+            }
+        }());
+
+
+        let expire = (function () {
+            return {
+                isExpire: (model, expireIndex) => {
+                    return model === "Forest.ldr" || (expireIndex !== undefined && expireIndex <= -1);
+                },
+                showInfo: () => {
+                    document.querySelector("#expire-info").style.display = "block";
+                }
+            }
+        }());
+
+
+        function isPC() {
+            var userAgentInfo = navigator.userAgent;
+            var Agents = new Array("Android", "iPhone", "SymbianOS", "Windows Phone", "iPad", "iPod");
+            var flag = true;
+            for (var v = 0; v < Agents.length; v++) {
+                if (userAgentInfo.indexOf(Agents[v]) > 0) { flag = false; break; }
+            }
+            return flag;
+        }
+
+        if (!isPC()) {
+            // init vConsole
+            let _ = new VConsole();
+        }
+
+
         let onLogin = (app, tcb) => {
+            let url = new URL(window.location.href);
+            let searchParams = new URLSearchParams(url.search);
+
+            let expireIndex = searchParams.get("expireIndex");
+            let model = searchParams.get("model");
+
+            if (expire.isExpire(model, expireIndex)) {
+                expire.showInfo();
+                return;
+            }
+
+
             cloud.setApp(app);
             cloud.setTcb(tcb);
 
             ldr.Adapter.setAdapter(THREEAdapter);
 
-
             let startTime = new Date();
 
-            // let model = cloud.getStoragePrefix() + "models/box.dat"
+
+
+            let modelUrl = cloud.getStoragePrefix() + "models/" + model;
+
+
+
+            // let url = window.location.href;
+
+            // let urlObject = new URL(url);
+            // let searchParams = new URLSearchParams(urlObject.search);
+
+            // let model = null;
+
+            // if (searchParams.has("model")) {
+            //     localStorage.setItem("model", searchParams.get("model"));
+            //     window.location.href = url.slice(0, url.indexOf('?'));
+            //     return;
+            // }
+            // else {
+            //     model = cloud.getStoragePrefix() + "models/" + localStorage.getItem("model");
+            // }
+
+            // console.log("model: ", model);
+
+
+            // let model = cloud.getStoragePrefix() + "models/J20(0626).ldr"
+            // let model = cloud.getStoragePrefix() + "models/a1.ldr"
             // let model = cloud.getStoragePrefix() + "models/corvette_full.mpd"
-            let model = cloud.getStoragePrefix() + "models/Apple Tree Final.ldr"
+            // let model = cloud.getStoragePrefix() + "models/Apple Tree Final.ldr"
+            // let model = cloud.getStoragePrefix() + "models/jazlecraz_woodland_retreat (1).ldr"
+            // let model = cloud.getStoragePrefix() + "models/jazlecraz_woodland_retreat (1).ldr"
+            // let model = cloud.getStoragePrefix() + "models/42055-bucket-excavator-3-lxf_orig.ldr"
+            // let model = cloud.getStoragePrefix() + "models/4x4 pickup.ldr"
 
             // Set up camera:
-            let camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000000);
-            camera.position.set(10000, 7000, 10000);
+            // let camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000000);
+            // camera.position.set(10000, 7000, 10000);
+            // camera.lookAt(new THREE.Vector3());
+
+
+            let camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000000);
+            // camera.position.set(1000, 700, 200);
+            camera.position.set(-500, 700, 1000);
             camera.lookAt(new THREE.Vector3());
+
+
 
             // Set up scene:
             let scene = new THREE.Scene();
@@ -54,18 +199,19 @@
             let mc = new ldr.LDRMeshCollector(opaqueObject, sixteenObject, transObject);
 
             // Set up renderer:
+            // let renderer = new THREE.WebGLRenderer({ antialias: true, canvas: document.querySelector("canvas") });
             let renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setPixelRatio(window.devicePixelRatio);
             function render() {
                 renderer.render(scene, camera);
             }
-            document.body.appendChild(renderer.domElement);
+
 
             function onWindowResize() {
-                camera.left = -window.innerWidth;
-                camera.right = window.innerWidth;
-                camera.top = window.innerHeight;
-                camera.bottom = -window.innerHeight;
+                // camera.left = -window.innerWidth;
+                // camera.right = window.innerWidth;
+                // camera.top = window.innerHeight;
+                // camera.bottom = -window.innerHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);
                 render();
@@ -88,20 +234,24 @@
                 }
             });
 
-            ldrLoader.load(model)
+            loadingBar.setLoadingProgress(0.0);
+            loadingBar.show();
+
+            ldrLoader.load(modelUrl)
                 .subscribe({
                     next: (data) => {
-                        console.log("next: ", data)
+                        // console.log("next: ", data)
+                        loadingBar.setLoadingProgress(ldrLoader.getLoadingProgress());
                     },
                     error: (e) => {
-                        console.log(e);
+                        console.error(e);
                     },
                     complete: () => {
+                        loadingBar.hide();
+
                         console.log("Model loaded in " + (new Date() - startTime) + "ms.");
 
                         let startTime2 = new Date();
-
-                        console.log(ldrLoader);
 
                         ldrLoader.generate(4, mc);
 
@@ -117,6 +267,8 @@
 
 
                         console.log("Model rendered in " + (new Date() - startTime2) + "ms.");
+
+                        document.body.appendChild(renderer.domElement);
                     }
                 });
         };
