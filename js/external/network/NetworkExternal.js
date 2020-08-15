@@ -18,7 +18,7 @@ let NetworkExternal = (function () {
                     let el = res.fileList[0];
 
                     if (el.code === 'SUCCESS') {
-                        return fetch(el.tempFileURL);
+                        return fetch(el.tempFileURL, {});
                     } else {
                         _handleError(el);
                     }
